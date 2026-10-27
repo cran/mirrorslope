@@ -1,0 +1,176 @@
+---
+title: "Introduction to mirrorslope"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to mirrorslope}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse   = TRUE,
+  comment    = "#>",
+  fig.width  = 8,
+  fig.height = 6,
+  dpi        = 150
+)
+library(mirrorslope)
+library(ggplot2)
+```
+
+## What a mirror slope plot shows
+
+The mirrored slopegraph was designed by Kati Maharry and is described in
+Maharry and Sullivan (2026, manuscript in preparation). It was first used in
+the supplementary appendix of the HOPE-3 trial report (McDonald et al., *Lancet*
+2026, doi:10.1016/S0140-6736(26)01385-1). This package implements the display.
+
+A mirror slope plot compares two treatment arms over a single observation
+interval. Both arms share one x-axis and converge at a central endpoint, so
+the between-arm gap at that endpoint is the primary visual quantity. The
+reference arm is drawn on the left and the comparator on the right; both mean
+lines meet at the centre, corresponding to the endpoint visit.
+
+The x-axis is positional, not numeric: it encodes baseline versus endpoint for
+each arm and should not be read as elapsed time.
+
+Because `mirror_slope_plot()` returns a standard `ggplot` object, the full
+ggplot2 ecosystem remains available for further customisation.
+
+## The pipeline
+
+A plot is built in stages. Each stage returns a `mirror_data` object, so the
+steps compose naturally with the pipe. The object stores everything available;
+the plot call exposes only what is requested.
+
+1. `prep_mirror_data()` validates and structures the analysis data.
+2. `add_summary()` attaches the group-level estimates that define the mean lines.
+3. `add_precision()` optionally attaches per-arm standard errors or intervals.
+4. `add_difference()` optionally attaches the between-arm difference and its
+   precision and p-value.
+5. `mirror_slope_plot()` renders the figure.
+
+## A minimal example
+
+We simulate a small change-from-baseline dataset with two arms and two visits.
+
+```{r data}
+set.seed(1)
+n <- 40
+df <- data.frame(
+  USUBJID = rep(paste0("S", seq_len(n)), each = 2),
+  TRTP    = rep(c(rep("Placebo", n / 2), rep("Active", n / 2)), each = 2),
+  AVISIT  = rep(c("Baseline", "Week 24"), times = n),
+  AVAL    = c(rbind(rep(0, n),
+                    c(rnorm(n / 2, -10, 5), rnorm(n / 2, -6, 5)))),
+  stringsAsFactors = FALSE
+)
+head(df, 4)
+```
+
+Prepare the data and attach the summary estimates:
+
+```{r minimal}
+md <- prep_mirror_data(
+  df,
+  trt_levels    = c("Placebo", "Active"),
+  time_baseline = "Baseline",
+  time_endpoint = "Week 24",
+  value_label   = "% Change from Baseline"
+)
+
+md <- add_summary(
+  md,
+  estimates  = c("Placebo" = -10.2, "Active" = -5.9),
+  stat_label = "LS-Mean"
+)
+
+mirror_slope_plot(
+  md,
+  trt_colors = mirror_palette("colorblind"),
+  title      = "Percent Change from Baseline at Week 24"
+)
+```
+
+## Adding the difference and relative benefit
+
+Attaching a difference enables the annotation zone to the right of the panel.
+`show_difference` displays the difference value; `show_slowing` adds the derived
+relative benefit. Either one also draws the shaded band between the two means.
+
+```{r difference}
+md <- add_difference(
+  md,
+  estimate = 4.3,
+  ci_lower = 1.2,
+  ci_upper = 7.4,
+  p_value  = 0.011
+)
+
+mirror_slope_plot(
+  md,
+  trt_colors      = mirror_palette("colorblind"),
+  show_difference = TRUE,
+  show_slowing    = TRUE,
+  title           = "Percent Change from Baseline at Week 24",
+  footnote        = "LS-means from a mixed model. Positive difference favours the active arm."
+)
+```
+
+## Showing per-arm precision
+
+`add_precision()` stores standard errors or confidence intervals per arm.
+Setting `show_precision = TRUE` draws a precision bar at each endpoint marker.
+
+```{r precision}
+md <- add_precision(
+  md,
+  ci = list("Placebo" = c(-13.3, -7.1),
+            "Active"  = c(-8.4, -3.4))
+)
+
+mirror_slope_plot(
+  md,
+  trt_colors      = mirror_palette("colorblind"),
+  show_difference = TRUE,
+  show_slowing    = TRUE,
+  show_precision  = TRUE,
+  title           = "Percent Change from Baseline at Week 24"
+)
+```
+
+## Individual subject trajectories
+
+`show_spaghetti = TRUE` overlays each subject's baseline-to-endpoint line
+beneath the group means. For large samples, reduce `spaghetti_alpha` to control
+overplotting.
+
+```{r spaghetti}
+mirror_slope_plot(
+  md,
+  trt_colors      = mirror_palette("colorblind"),
+  show_spaghetti  = TRUE,
+  spaghetti_alpha = 0.2,
+  show_difference = TRUE,
+  show_slowing    = TRUE,
+  title           = "With individual trajectories"
+)
+```
+
+## Inspecting the object
+
+Printing a `mirror_data` object summarises the arms, analysed N, statistic
+label, and which optional elements are attached. `summary()` returns per-arm,
+per-timepoint descriptives.
+
+```{r inspect}
+md
+summary(md)
+```
+
+## Next steps
+
+See the *Clinical workflow with ADaM data* vignette for a realistic
+data-preparation pattern, and the *Customising the plot* vignette for theming,
+palettes, and combining multiple panels.

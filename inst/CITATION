@@ -1,0 +1,16 @@
+citHeader("To cite mirrorslope or the mirrored slopegraph in publications use:")
+
+bibentry(
+  bibtype = "Unpublished",
+  title   = "The Mirrored Slopegraph: A Back-to-Back Composition for Comparing Two-Arm Change-from-Baseline Trajectories",
+  author  = c(person("Kati", "Maharry"), person("Adam", "Sullivan")),
+  year    = "2026",
+  note    = "Manuscript in preparation. R package mirrorslope, https://github.com/Sullivanstatistics/mirrorslope",
+  textVersion = paste(
+    "Maharry K, Sullivan A (2026).",
+    "The Mirrored Slopegraph: A Back-to-Back Composition for Comparing Two-Arm Change-from-Baseline Trajectories.",
+    "Manuscript in preparation. R package mirrorslope, https://github.com/Sullivanstatistics/mirrorslope"
+  )
+)
+
+citFooter("The display was first used in the supplementary appendix of McDonald CM et al. (2026), Lancet 408:721-733, doi:10.1016/S0140-6736(26)01385-1.")
